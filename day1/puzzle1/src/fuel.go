@@ -16,7 +16,7 @@ func check(e error) {
 
 func main() {
 	// change to request the input file from user
-    file, err := os.Open("/Users/jrhorner1/Documents/git_projects/adventofcode2019/day1/puzzle1/input")
+    file, err := os.Open("input")
     check(err)
     defer file.Close()
 
@@ -24,10 +24,10 @@ func main() {
 
     scanner := bufio.NewScanner(file)
     for scanner.Scan() {
-    	mass, err := strconv.ParseFloat(scanner.Text(), 64)
+    	mass, err := strconv.ParseInt(scanner.Text(), 10, 64)
     	check(err)
-    	mass_rd := int64(mass / 3)
-    	fuel += mass_rd - 2
+    	fuel_req := ( mass / 3 ) - 2
+    	fuel += fuel_req
     }
 
     fmt.Println(fuel)
