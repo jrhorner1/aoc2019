@@ -17,7 +17,7 @@ func check(e error) {
 
 func main() {
 	// change to request the input file from user
-    file, err := os.Open("/Users/jrhorner1/Documents/git_projects/adventofcode2019/day2/puzzle1/input")
+    file, err := os.Open("input")
     check(err)
     defer file.Close()
 
@@ -48,7 +48,7 @@ func main() {
             intcode[2] = verb
 
             // Process each opcode
-            var break_code bool
+            var break_code bool = false
             var opcode [4]int
             for intcode_pos := 0; break_code == false ; intcode_pos += 4{
                 for i := 0; i < 4; i++ {
@@ -80,7 +80,7 @@ func main() {
     //     fmt.Printf("%d,", intcode[i])
     // }
     // fmt.Println()
-    fmt.Println(100 * noun + verb)
+    fmt.Println("Noun/Verb pair for 19690720 output: ",100 * noun + verb)
 
     if err := scanner.Err(); err != nil {
         log.Fatal(err)
