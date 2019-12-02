@@ -14,34 +14,32 @@ func check(e error) {
     }
 }
 
+func fuelRequired(mass int) int {
+    fuel_req := ( mass / 3 ) - 2
+    if fuel_req < 0 {
+        return 0
+    }
+    return fuel_req
+}
+
 func main() {
 	// change to request the input file from user
-    file, err := os.Open("/Users/jrhorner1/Documents/git_projects/adventofcode2019/day1/puzzle2/input")
+    file, err := os.Open("input")
     check(err)
     defer file.Close()
 
-    var fuel int64
+    var fuel int
 
     scanner := bufio.NewScanner(file)
     for scanner.Scan() {
-    	module_mass, err := strconv.ParseFloat(scanner.Text(), 64)
+    	module_mass, err := strconv.Atoi(scanner.Text())
     	check(err)
 
-        var module_fuel_req int64
-
-    	fuel_req := int64(module_mass / 3) - 2
-        module_fuel_req += fuel_req
-
-        fuel_mass := float64(fuel_req)
-        for fuel_mass >= 0 {
-            fuel_req := int64(fuel_mass / 3) - 2
-            if fuel_req <= 0 {
-                break
-            }
-            module_fuel_req += fuel_req
-            fuel_mass = float64(fuel_req)
+        fuel_req := fuelRequired(module_mass)
+        for fuel_req > 0 {
+            fuel += fuel_req
+            fuel_req = fuelRequired(fuel_req)
         }
-        fuel += module_fuel_req
     }
 
     fmt.Println(fuel)
