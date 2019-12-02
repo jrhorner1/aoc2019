@@ -17,7 +17,7 @@ func check(e error) {
 
 func main() {
 	// change to request the input file from user
-    file, err := os.Open("/Users/jrhorner1/Documents/git_projects/adventofcode2019/day2/puzzle1/input")
+    file, err := os.Open("input")
     check(err)
     defer file.Close()
 
@@ -45,7 +45,7 @@ func main() {
     intcode[2] = 2
 
     // Process each opcode
-    var break_code bool
+    var break_code bool = false
     var opcode [4]int
     for intcode_pos := 0; break_code == false ; intcode_pos += 4{
         for i := 0; i < 4; i++ {
@@ -62,10 +62,18 @@ func main() {
         }
     }
 
-    // Print each element of the intcode array
+    // Print each element of the intcode array after processing
+    fmt.Println("Program memory: ")
     for i := 0; i < len(intcode); i++ {
+        if i == ( len(intcode) - 1 ) {
+            fmt.Printf("%d\n\n", intcode[i])
+            break
+        }
         fmt.Printf("%d,", intcode[i])
     }
+
+    // print only the final value in position 0
+    fmt.Println("1202 program alarm: ",intcode[0])
 
     if err := scanner.Err(); err != nil {
         log.Fatal(err)
