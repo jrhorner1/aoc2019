@@ -75,7 +75,7 @@ func procIntc(intcode_str []string, phase int, output [5]chan int, j int, wg *sy
     var break_code bool
     var intcode_adv, inputCount int = 0, 0
     for intcode_pos := 0; break_code == false; intcode_pos += intcode_adv {
-        fmt.Println("GR",j,"DEBUG: intcode_pos:",intcode_pos)
+        // fmt.Println("GR",j,"DEBUG: intcode_pos:",intcode_pos)
         instr, params := get_opcode(intcode_str[intcode_pos])
         params = get_params(instr, params, intcode_pos, intcode_str)
         // process opcode
@@ -99,13 +99,17 @@ func procIntc(intcode_str []string, phase int, output [5]chan int, j int, wg *sy
                 fmt.Println("GR",j,"Phase Input:",intcode_str[params[0]])
             case 1: 
                 if j == 0 {
-                    intcode_str[params[0]] = strconv.Itoa(<-output[j])
+                    intcode_str[params[0]] = strconv.Itoa(<-output[0])
                 } else {
                     intcode_str[params[0]] = strconv.Itoa(<-output[j-1])
                 }
                 fmt.Println("GR",j,"Initial Input:",intcode_str[params[0]])
             default:
-                intcode_str[params[0]] = strconv.Itoa(<-output[j])
+                if j == 0 {
+                    intcode_str[params[0]] = strconv.Itoa(<-output[4])
+                } else {
+                    intcode_str[params[0]] = strconv.Itoa(<-output[j-1])
+                }
                 fmt.Println("GR",j,"Auxillary Input:",intcode_str[params[0]])
             }
             inputCount++
