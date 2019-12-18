@@ -6,155 +6,150 @@ import (
     "os"
     "strconv"
     "strings"
-    "sync"
+    // "time"
 )
 
-func get_opcode(opcode_str string) (int, []int) {
-    var instr int
-        var params []int
-        switch len(opcode_str) {
-        case 1,2:
-            instr, _ = strconv.Atoi(opcode_str)
-            for i := 2; i >= 0; i-- {
-                param := 0
-                params = append(params, param)
-            }
-        case 3:
-            instr, _ = strconv.Atoi(opcode_str[1:])
-            for i := 0; i >= -2; i-- {
-                if i == 0 {
-                    param := int(opcode_str[i] - '0')
-                    params = append(params, param)
-                } else {
-                    param := 0
-                    params = append(params, param)
-                }
-            }
-        case 4:
-            instr, _ = strconv.Atoi(opcode_str[2:])
-            for i := 1; i >= -1; i-- {
-                if i == 0 || i == 1 {
-                    param := int(opcode_str[i] - '0')
-                    params = append(params, param)
-                } else {
-                    param := 0
-                    params = append(params, param)
-                }
-            }
-        case 5:
-            instr, _ = strconv.Atoi(opcode_str[3:])
-            for i := 2; i >= 0; i-- {
-                param := int(opcode_str[i] - '0')
-                params = append(params, param)
-            }
-        }
-
-    return instr, params
-}
-
-func get_params(instr int, params []int, intcode_pos int, intcode_str []string) []int {
+func GetArgs(instr int, params []int, ip int, memory []int) []int {
     var param_len int
+    var args []int
     switch instr {
     case 1,2,7,8: param_len = len(params)
     case 5,6: param_len = len(params) - 1
     }
     for i := 0; i < param_len; i++ {
-        temp, _ := strconv.Atoi(intcode_str[intcode_pos + i + 1])
+        temp := memory[ip + i + 1]
+        if i == 2 {
+            args = append(args, temp)
+            continue
+        }
         switch params[i] {
         case 1:
-            params[i] = temp
+            args = append(args, temp)
         case 0:
-            params[i], _ = strconv.Atoi(intcode_str[temp])
+            args = append(args, memory[temp])
         }
     }
-    return params
+    return args
 }
 
-func procIntc(intcode_str []string, phase int, output [5]chan int, j int, wg *sync.WaitGroup) {
-    // Process each opcode
-    var break_code bool
-    var intcode_adv, inputCount int = 0, 0
-    for intcode_pos := 0; break_code == false; intcode_pos += intcode_adv {
-        // fmt.Println("GR",j,"DEBUG: intcode_pos:",intcode_pos)
-        instr, params := get_opcode(intcode_str[intcode_pos])
-        params = get_params(instr, params, intcode_pos, intcode_str)
-        // process opcode
+func GetParams(opcode int) (int, []int) {
+    opcode_str := strconv.Itoa(opcode)
+    var instr int
+    var params []int
+    switch len(opcode_str) {
+    case 1,2:
+        instr, _ = strconv.Atoi(opcode_str)
+        for i := 2; i >= 0; i-- {
+            param := 0
+            params = append(params, param)
+        }
+    case 3:
+        instr, _ = strconv.Atoi(opcode_str[1:])
+        for i := 0; i >= -2; i-- {
+            if i == 0 {
+                param := int(opcode_str[i] - '0')
+                params = append(params, param)
+            } else {
+                param := 0
+                params = append(params, param)
+            }
+        }
+    case 4:
+        instr, _ = strconv.Atoi(opcode_str[2:])
+        for i := 1; i >= -1; i-- {
+            if i == 0 || i == 1 {
+                param := int(opcode_str[i] - '0')
+                params = append(params, param)
+            } else {
+                param := 0
+                params = append(params, param)
+            }
+        }
+    case 5:
+        instr, _ = strconv.Atoi(opcode_str[3:])
+        for i := 2; i >= 0; i-- {
+            param := int(opcode_str[i] - '0')
+            params = append(params, param)
+        }
+    }
+
+    return instr, params
+}
+
+func Run(intcode *[]int, phase int, input <-chan int, output chan<- int, GR int) {
+    memory := make([]int, len(*intcode))
+    copy(memory, *intcode)
+    var bc bool
+    var ip_adv, inc int = 0, 0
+    // fmt.Println("GR",GR,"Memory:",memory)
+
+    for ip := 0; bc == false; ip += ip_adv {
+
+        instr, params := GetParams(memory[ip])
+        args := GetArgs(instr, params, ip, memory)
+        if instr == 3 || instr == 4 {
+            args = append(args, memory[ip + 1])
+        }
+
+        // fmt.Println("GR",GR,"Position:",ip,"Instruction:",instr,"Parameters:",params,"Arguments:",args)
+        
         switch instr {
         case 1: // addition
-            intcode_adv = 4
-            params[2] = params[0] + params[1]
-            temp, _ := strconv.Atoi(intcode_str[intcode_pos + 3])
-            intcode_str[temp] = strconv.Itoa(params[2])
+            ip_adv = 4
+            memory[args[2]] = args[0] + args[1]
         case 2: // multiplication
-            intcode_adv = 4
-            params[2] = params[0] * params[1]
-            temp, _ := strconv.Atoi(intcode_str[intcode_pos + 3])
-            intcode_str[temp] = strconv.Itoa(params[2])
+            ip_adv = 4
+            memory[args[2]] = args[0] * args[1]
         case 3: // input
-            intcode_adv = 2 
-            params[0], _ = strconv.Atoi(intcode_str[intcode_pos + 1])
-            switch inputCount {
+            ip_adv = 2 
+            switch inc {
             case 0:
-                intcode_str[params[0]] = strconv.Itoa(phase)
-                fmt.Println("GR",j,"Phase Input:",intcode_str[params[0]])
-            case 1: 
-                if j == 0 {
-                    intcode_str[params[0]] = strconv.Itoa(<-output[0])
-                } else {
-                    intcode_str[params[0]] = strconv.Itoa(<-output[j-1])
-                }
-                fmt.Println("GR",j,"Initial Input:",intcode_str[params[0]])
+                memory[args[0]] = phase
+                // fmt.Println("GR",GR,"Phase Input:",memory[args[0]])
             default:
-                if j == 0 {
-                    intcode_str[params[0]] = strconv.Itoa(<-output[4])
-                } else {
-                    intcode_str[params[0]] = strconv.Itoa(<-output[j-1])
-                }
-                fmt.Println("GR",j,"Auxillary Input:",intcode_str[params[0]])
+                memory[args[0]] = <-input
+                // fmt.Println("GR",GR,"Signal Input:",memory[args[0]])
             }
-            inputCount++
+            inc++
         case 4: // output
-            intcode_adv = 2
-            if params[0] == 0 {
-                temp, _ := strconv.Atoi(intcode_str[intcode_pos+1])
-                outputVal, _ := strconv.Atoi(intcode_str[temp])
-                fmt.Println("GR",j,"Outputting:",outputVal)
-                output[j] <- outputVal
-                continue
-            }
-            fmt.Println(intcode_str[intcode_pos+1])
+            ip_adv = 2
+            output <- memory[args[0]]
+            // fmt.Println("GR",GR,"Signal Output:",memory[args[0]])
         case 5: // jump-if-true
-            if params[0] != 0 {
-                intcode_adv = params[1] - intcode_pos
+            if args[0] != 0 {
+                ip_adv = args[1] - ip
             } else {
-                intcode_adv = 3
+                ip_adv = 3
             }
         case 6: // jump-if-false
-            if params[0] == 0 {
-                intcode_adv = params[1] - intcode_pos
+            if args[0] == 0 {
+                ip_adv = args[1] - ip
             } else {
-                intcode_adv = 3
+                ip_adv = 3
             }
         case 7: // less than
-            intcode_adv = 4
-            temp, _ := strconv.Atoi(intcode_str[intcode_pos + 3])
-            if params[0] < params[1] {
-                intcode_str[temp] = "1"
+            ip_adv = 4
+            if args[0] < args[1] {
+                memory[args[2]] = 1
             } else {
-                intcode_str[temp] = "0"
+                memory[args[2]] = 0
             }
         case 8: // equals
-            intcode_adv = 4
-            temp, _ := strconv.Atoi(intcode_str[intcode_pos + 3])
-            if params[0] == params[1] {
-                intcode_str[temp] = "1"
+            ip_adv = 4
+            if args[0] == args[1] {
+                memory[args[2]] = 1
             } else {
-                intcode_str[temp] = "0"
+                memory[args[2]] = 0
             }
         case 99: // end program
-            break_code = true
-            wg.Done()
+            bc = true
+            if GR == 4 {
+                close(output)
+                // fmt.Println("GR", GR, "Closing output channel")
+            }
+            // fmt.Println("GR", GR, "Exiting")
         }
+        // fmt.Println("GR",GR,"Memory:",memory)
     }
 }
 
@@ -198,6 +193,13 @@ func main() {
     	intcode_str = strings.Split(scanner.Text(),",")
     }
 
+    var intcode []int
+    for i := range intcode_str {
+        temp, _ := strconv.Atoi(intcode_str[i])
+        intcode = append(intcode, temp)
+    }
+    // fmt.Println(intcode)
+
     // generate list of permutations
     var phasesList [][]int
     // phaseVals := []int{0, 1, 2, 3, 4}
@@ -205,38 +207,44 @@ func main() {
     for _, perm := range(permutations(phaseVals)){
        phasesList = append(phasesList, perm)
     }
-    fmt.Println(len(phasesList),phasesList)
+    // fmt.Println(len(phasesList),phasesList)
 
-    // loop through list using each as the values for the incode
-    var wg sync.WaitGroup
-    var outputList []int
+    // loop through list using each as the values for the intcode
+    var ans int = 0
+    var output []chan int
     for i := range phasesList {
         phases := phasesList[i]
-        var output [5]chan int
-        for i := range output {
-            output[i] = make(chan int)
+        // fmt.Println("Beginning phase pattern:", phases)
+        output = append(output, make(chan int))
+        var input [5]chan int
+        for j := range input {
+            input[j] = make(chan int, 1)
         }
-        for j := range phases {
-            phase := phases[j]
-            fmt.Println("Creating goroutine",j)
-            wg.Add(1)
-            go procIntc(intcode_str, phase, output, j, &wg)
-            if j == 0 {
-                output[j] <- 0
+        input[0] <- 0
+        for k := range phases {
+            phase := phases[k]
+            // fmt.Println("Creating goroutine",k)
+            // time.Sleep(200 * time.Millisecond)
+            go Run(&intcode, phase, input[k], output[i], k)
+        }
+        var out int 
+        ok := true
+        for ok {
+            for l := range phases {
+                // time.Sleep(2 * time.Millisecond)
+                out, ok = <- output[i]
+                if ans < out {
+                    ans = out
+                }
+                if ok {
+                    if l != len(phases) - 1 {
+                        input[l+1] <- out
+                    } else {
+                        input[0] <- out
+                    }
+                }
             }
-        }
-        wg.Wait()
-        outputList = append(outputList, <-output[4])
-    }
-    fmt.Println(outputList)
-    
-    // loop through the output to determine which final value is largest
-    var ans int = 0
-    for i := range outputList {
-        output := outputList[i]
-        if output > ans {
-            ans = output
-        }
+        }        
     }
     fmt.Println("Solution:",ans)
 }
