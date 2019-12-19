@@ -117,7 +117,7 @@ func gold() {
     for ok {
         out, ok = <-computer.GetOutput()
         if ok {
-            fmt.Println("Silver:",out)
+            fmt.Println("Gold:",out)
         }
     }
 }
