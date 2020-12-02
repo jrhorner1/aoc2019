@@ -224,14 +224,12 @@ func main() {
         for k := range phases {
             phase := phases[k]
             // fmt.Println("Creating goroutine",k)
-            // time.Sleep(200 * time.Millisecond)
             go Run(&intcode, phase, input[k], output[i], k)
         }
         var out int 
         ok := true
         for ok {
             for l := range phases {
-                // time.Sleep(2 * time.Millisecond)
                 out, ok = <- output[i]
                 if ans < out {
                     ans = out
